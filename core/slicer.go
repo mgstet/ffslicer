@@ -94,17 +94,17 @@ func ParseCSV(tcFile string, videoFile string) []TimeDelta {
 
 	timedeltas := []TimeDelta{}
 
-	for _, row := range rows {
+	for i, row := range rows {
 		start, errs := parseTcToSecs(row[0], fps)
 		end, erre := parseTcToSecs(row[1], fps)
-		if errs != nil || erre != nil {
-			err := fmt.Errorf("failed to parse %s,%s", errs, erre)
-			fmt.Printf("%s\nSkipping...\n", err)
+		if err := errors.Join(errs, erre); err != nil {
+			slog.Error("failed to parse timecodes", "tc", row, "row", i, "err", err)
+			slog.Info("Skipping row", "row", row, "index", i)
 			continue
 		}
-		if start >= end {
-			err := fmt.Errorf("failed to parse %s,%s, start cannot be bigger than end", row[0], row[1])
-			fmt.Printf("%s\nSkipping...\n", err)
+		if err := errors.New("start cannot be bigger than end"); start >= end {
+			slog.Error("failed to parse timecodes", "tc", row, "row", i, "err", err)
+			slog.Info("Skipping", "tc", row, "row", i)
 			continue
 		}
 		duration := end - start + (1 / float64(fps))
