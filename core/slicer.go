@@ -115,27 +115,42 @@ func ParseCSV(tcFile string, videoFile string) []TimeDelta {
 	return timedeltas
 }
 
-func RunFFmpeg(timedeltas []TimeDelta, videoFile string, verbose bool) {
+func RunFFmpeg(timedeltas []TimeDelta, videoFile string, args string, verbose bool) {
 
 	for i, tf := range timedeltas {
-		out := fmt.Sprintf("%s_%04d%s", strings.TrimSuffix(videoFile, filepath.Ext(videoFile)), i, filepath.Ext(videoFile))
-		arg := fmt.Sprintf("-y -i %s -ss %f -t %f -c:v copy -c:a copy %s", videoFile, tf.startTime, tf.duration, out)
-		args := strings.Split(arg, " ")
-		cmd := exec.Command("ffmpeg", args...)
+		out := fmt.Sprintf(" %s_%04d%s", strings.TrimSuffix(videoFile, filepath.Ext(videoFile)), i, filepath.Ext(videoFile))
+		
+		command := fmt.Sprintf("-y -i %s -ss %f -t %f ", videoFile, tf.startTime, tf.duration)
+		
+		switch args {
+		case "":
+			command += "-c:v copy -c:a copy"
+		default:
+			command += args
+		}
+
+		command += out
+
+		cmdlist := strings.Split(command, " ")
+
+		cmd := exec.Command("ffmpeg", cmdlist...)
 		slog.Info("Processing slice #", strconv.Itoa(i), out)
 
 		var errb bytes.Buffer
 		cmd.Stderr = &errb
 
+		
 		err := cmd.Run()
+		
+		if verbose {
+			fmt.Println(errb.String())
+		}
+
 		if err != nil {
 			fmt.Println("Error running ffmpeg:", err)
 			os.Exit(1)
 		}
 
-		if verbose {
-			fmt.Println(errb.String())
-		}
 
 	}
 }
